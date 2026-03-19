@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VibeCheck 2026</title>
-	     <link rel="icon" href="Favicon.png" type="image/png">
+    <title>Vibes</title>
+	     <link rel="icon" href="Favicon.png" type="image/png">	
+    <audio id="vibe-audio"></audio>	
     <style>
         :root {
-            --bg-color: #BDB8D9; /* Default soft grey before clicking */
+            --bg-color: #f1f2f6; /* Default soft grey before clicking */
             --text-color: #2d3436;
             --accent: #a29bfe;
         }
@@ -23,6 +24,9 @@
             margin: 0;
             transition: all 0.8s ease;
             cursor: none;
+        }
+		button, iframe {
+            cursor: pointer;
         }
 
         .glass-container {
@@ -49,7 +53,11 @@
             color: white;
         }
 
-        button:hover { transform: scale(1.1); }
+        button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 25px var(--accent),
+                        0 0 50px var(--accent);
+        }
 
         #cursor {
             width: 20px; height: 20px;
@@ -60,38 +68,107 @@
             z-index: 9999;
             transition: transform 0.1s ease-out, background 0.5s;
         }
-		  /* Add to end of <style> */
-        .glass-container {
-            animation: fadeIn 1.5s ease-in;
-        }
 
-        @keyframes fadeIn {
-           from { opacity: 0; transform: translateY(20px); }
-           to { opacity: 1; transform: translateY(0); }
-        }
-
-		#player-wrapper { margin-top: 25px; min-height: 80px; }
+        #player-wrapper { margin-top: 25px; min-height: 80px; }
 		
-        .active-vibe { 
-           transform: scale(1.1); 
-           filter: brightness(1.2); 
-           border: 2px solid white; 
+		#bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+		button {
+            position: relative;
+            overflow: hidden;
         }
 
+        .ripple {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 50%;
+            transform: scale(0);
+            animation: ripple 0.6s linear;
+        }
+
+        @keyframes ripple {
+            to {
+                 transform: scale(4);
+                 opacity: 0;
+            }
+        }
+		
+		body {
+           transition: background 0.8s ease, color 0.5s ease;
+        }
+		
+		body {
+           background: linear-gradient(-45deg, #a29bfe, #74b9ff, #81ecec, #fab1a0);
+           background-size: 400% 400%;
+           animation: gradientMove 12s ease infinite;
+        }
+
+        @keyframes gradientMove {
+           0% { background-position: 0% 50%; }
+           50% { background-position: 100% 50%; }
+           100% { background-position: 0% 50%; }
+        }
+		
+		.trail {
+           position: fixed;
+           width: 8px;
+           height: 8px;
+           background: var(--accent);
+           border-radius: 50%;
+           pointer-events: none;
+        } 
+		
+		.glass-container {
+           animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+           0% { transform: scale(1); }
+           50% { transform: scale(1.02); }
+           100% { transform: scale(1); }
+        }
+		
+		#now-playing {
+           position: fixed;
+           bottom: 20px;
+           left: 50%;
+           transform: translateX(-50%);
+           background: rgba(0,0,0,0.6);
+           color: white;
+           padding: 10px 20px;
+           border-radius: 20px;
+           backdrop-filter: blur(10px);
+           font-size: 14px;
+        }
     </style>
 </head>
 <body id="main-body">
+    <canvas id="bg-animation"></canvas>
+	<audio id="click-sound" src="https://www.fesliyanstudios.com/play-mp3/387"></audio>
 
     <div id="cursor"></div>
 
     <div class="glass-container">
+	<div id="now-playing">🎧 Nothing playing</div>
         <h1 id="vibe-title">Select Your Vibe</h1>
         <p>Your dashboard will transform to match your mood.</p>
         
         <div class="button-group">
-            <button onclick="changeVibe('chill')">Chill 🌿</button>
-            <button onclick="changeVibe('energy')">Energy ⚡</button>
-            <button onclick="changeVibe('midnight')">Midnight 🌙</button>
+         <button onclick="changeVibe('soft')">Soft ✨</button>
+         <button onclick="changeVibe('sad')">Sad 💔</button>
+         <button onclick="changeVibe('drive')">Drive 🚗</button>
+         <button onclick="changeVibe('focus')">Focus 🧠</button>
+         <button onclick="changeVibe('main')">Main 🔥</button>
+         <button onclick="changeVibe('rain')">Rain 🌧</button>
+         <button onclick="changeVibe('party')">Party 🎉</button>
         </div>
 
         <div id="player-wrapper">
@@ -100,64 +177,224 @@
     </div>
 
     <script>
-        function changeVibe(vibe) {
-            const title = document.getElementById('vibe-title');
+        function animateTitle(text) {
+            let i = 0;
+            document.title = "";
+
+            const typing = setInterval(() => {
+               document.title = text.substring(0, i);
+               i++;
+
+               if (i > text.length) {
+                 clearInterval(typing);
+                 startEmojiLoop(text);
+                }
+            }, 80);
+        }
+		
+		function changeVibe(vibe) {
             const playerWrapper = document.getElementById('player-wrapper');
 
-        // 1. Loading state
-        playerWrapper.innerHTML = `<p style="color: var(--text-color);">Loading your vibes...</p>`;
+            const names = {
+               soft: "Soft Aesthetic ✨",
+               sad: "Sad 💔",
+               drive: "Late Night Drive 🚗",
+               focus: "Focus Mode 🧠",
+               main: "Main Character 🔥",
+               rain: "Rainy Mood 🌧",
+               party: "Party 🎉"
+            };
 
-        // 2. Active button logic
-        document.querySelectorAll('button').forEach(btn => btn.classList.remove('active-vibe'));
-        event.currentTarget.classList.add('active-vibe');
+         // 🎧 Now playing
+        document.getElementById("now-playing").innerText =
+              "🎧 Now Playing: " + names[vibe];
 
-        // 3. Define your actual Spotify links here
-        const links = {
-            chill: "https://open.spotify.com/embed/playlist/0TwY3y0bkZbAwaKWQRZHf4",
-                energy: "https://open.spotify.com/embed/playlist/37i9dQZF1DX0vHZ8elq0UK",
-                midnight: "https://open.spotify.com/embed/playlist/6V2GNsbpa0BeFIX3yOy9qJ",
+         // ✨ Animated title
+        animateTitle(names[vibe]);
+
+         // 🎵 Sound
+        const sounds = {
+               soft: "https://www.fesliyanstudios.com/play-mp3/387",
+               sad: "https://www.fesliyanstudios.com/play-mp3/387",
+               drive: "https://www.fesliyanstudios.com/play-mp3/387",
+               focus: "https://www.fesliyanstudios.com/play-mp3/387",
+               main: "https://www.fesliyanstudios.com/play-mp3/387",
+               rain: "https://www.fesliyanstudios.com/play-mp3/387",
+               party: "https://www.fesliyanstudios.com/play-mp3/387"
         };
 
-        const randomLink = links[vibe];
+        const audio = document.getElementById("vibe-audio");
+        audio.src = sounds[vibe];
+        audio.play();
 
-        // 4. Color and Title update logic
-        if (vibe === 'chill') {
-            document.documentElement.style.setProperty('--bg-color', '#9DE3DF');
-            document.documentElement.style.setProperty('--text-color', '#2d3436');
-            document.documentElement.style.setProperty('--accent', '#00b894');
-            title.innerText = "Current Vibe: Chill 🌿";
-        } else if (vibe === 'energy') {
-            document.documentElement.style.setProperty('--bg-color', '#fff3e0');
-            document.documentElement.style.setProperty('--text-color', '#2d3436');
-            document.documentElement.style.setProperty('--accent', '#ff9800');
-            title.innerText = "Current Vibe: Energy ⚡";
-        } else if (vibe === 'midnight') {
-            document.documentElement.style.setProperty('--bg-color', '#2c3e50');
-            document.documentElement.style.setProperty('--text-color', '#ecf0f1');
-            document.documentElement.style.setProperty('--accent', '#9b59b6');
-            title.innerText = "Current Vibe: Midnight 🌙";
+         // 🎨 Colors
+        if (vibe === 'soft') {
+               document.documentElement.style.setProperty('--bg-color', '#fcefee');
+               document.documentElement.style.setProperty('--accent', '#ff9aa2');
+        } else if (vibe === 'sad') {
+               document.documentElement.style.setProperty('--bg-color', '#2f3640');
+               document.documentElement.style.setProperty('--text-color', '#dcdde1');
+               document.documentElement.style.setProperty('--accent', '#718093');
+        } else if (vibe === 'drive') {
+               document.documentElement.style.setProperty('--bg-color', '#1e272e');
+               document.documentElement.style.setProperty('--accent', '#8e44ad');
+        } else if (vibe === 'focus') {
+               document.documentElement.style.setProperty('--bg-color', '#ecf0f1');
+               document.documentElement.style.setProperty('--accent', '#3498db');
+        } else if (vibe === 'main') {
+               document.documentElement.style.setProperty('--bg-color', '#000000');
+               document.documentElement.style.setProperty('--accent', '#f1c40f');
+        } else if (vibe === 'rain') {
+               document.documentElement.style.setProperty('--bg-color', '#576574');
+               document.documentElement.style.setProperty('--accent', '#48dbfb');
+        } else if (vibe === 'party') {
+               document.documentElement.style.setProperty('--bg-color', '#2d3436');
+               document.documentElement.style.setProperty('--accent', '#e84393');
         }
 
-        // 5. Update the player
-        playerWrapper.innerHTML = `<iframe style="border-radius:12px" src="${randomLink}" width="100%" height="352" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
+         // 🌧 Animation sync
+        vibeMode = vibe;
+
+        if (vibe === 'rain') {
+               createParticles(150);
+        } else if (vibe === 'party') {
+               createParticles(200);
+        } else {
+               createParticles(100);
         }
 
-     // Cursor logic
-       const cursor = document.getElementById('cursor');
-       document.addEventListener('mousemove', (e) => {
-           cursor.style.left = e.clientX + 'px';
-           cursor.style.top = e.clientY + 'px';
-           cursor.style.transform = "translate(-50%, -50%)";
-        });
+         // 🎧 Spotify
+        const links = {
+               soft: "https://open.spotify.com/embed/playlist/37i9dQZF1DX4WYpdgoIcn6",
+               sad: "https://open.spotify.com/embed/playlist/37i9dQZF1DX7qK8ma5wgG1",
+               drive: "https://open.spotify.com/embed/playlist/37i9dQZF1DX0XUsuxWHRQd",
+               focus: "https://open.spotify.com/embed/playlist/37i9dQZF1DX8NTLI2TtZa6",
+               main: "https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M",
+               rain: "https://open.spotify.com/embed/playlist/37i9dQZF1DXbvABJXBIyiY",
+               party: "https://open.spotify.com/embed/playlist/37i9dQZF1DXaXB8fQg7xif"
+        };
 
-     //Add hover effect for buttons
-       document.querySelectorAll('button').forEach(btn => {
-           btn.addEventListener('mouseover', () => cursor.style.transform = "translate(-50%, -50%) scale(2)");
-           btn.addEventListener('mouseleave', () => cursor.style.transform = "translate(-50%, -50%) scale(1)");
+        playerWrapper.innerHTML = `
+               <iframe style="border-radius:12px"
+               src="${links[vibe]}"
+               width="100%" height="352"
+               frameBorder="0"
+               allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture">
+               </iframe>`;
+        }
+
+    // Cursor logic
+    const cursor = document.getElementById('cursor');
+
+    let trail = [];
+
+    document.addEventListener('mousemove', (e) => {
+        cursor.style.left = e.clientX + 'px';
+        cursor.style.top = e.clientY + 'px';
+
+        trail.push({ x: e.clientX, y: e.clientY });
+
+        if (trail.length > 10) trail.shift();
+
+        drawTrail();
+    });
+
+        function drawTrail() {
+            trail.forEach((point, index) => {
+                const dot = document.createElement("div");
+                   dot.className = "trail";
+                   dot.style.left = point.x + "px";
+                   dot.style.top = point.y + "px";
+                   dot.style.opacity = index / trail.length;
+
+                document.body.appendChild(dot);
+
+                setTimeout(() => dot.remove(), 300);
+            });
+        }
+	
+	const canvas = document.getElementById("bg-animation");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let particles = [];
+    let vibeMode = "soft";
+
+        function createParticles(count) {
+             particles = [];
+             for (let i = 0; i < count; i++) {
+                particles.push({
+                  x: Math.random() * canvas.width,
+                  y: Math.random() * canvas.height,
+                  size: Math.random() * 3 + 1,
+                  speedY: Math.random() * 1 + 0.5
+            });
+        }
+    }
+
+        function animate() {
+             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+             particles.forEach(p => {
+                 p.y += p.speedY;
+
+                 if (p.y > canvas.height) {
+                     p.y = 0;
+                     p.x = Math.random() * canvas.width;
+                }
+
+                 ctx.beginPath();
+
+                 if (vibeMode === "rain") {
+                     ctx.strokeStyle = "#48dbfb";
+                     ctx.moveTo(p.x, p.y);
+                     ctx.lineTo(p.x, p.y + 10);
+                     ctx.stroke();
+                } else {
+                     ctx.fillStyle = "rgba(255,255,255,0.7)";
+                     ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                     ctx.fill();
+                }
+            });
+
+        requestAnimationFrame(animate);
+    }
+
+    createParticles(100);
+    animate();
+	    function randomVibe() {
+             const vibes = ['soft','sad','drive','focus','main','rain','party'];
+             const random = vibes[Math.floor(Math.random() * vibes.length)];
+             changeVibe(random);
+        }
+		document.querySelectorAll("button").forEach(btn => {
+             btn.addEventListener("click", function(e) {
+                 const ripple = document.createElement("span");
+                 ripple.classList.add("ripple");
+
+                 ripple.style.left = e.offsetX + "px";
+                 ripple.style.top = e.offsetY + "px";
+
+                 this.appendChild(ripple);
+
+                 setTimeout(() => ripple.remove(), 600);
+            });
         });
-   </script>
+		
+		function startEmojiLoop(baseText) {
+            const emojis = ["✨", "💔", "🌧", "🔥", "🎧", "🌙"];
+
+            let i = 0;
+
+            setInterval(() => {
+                 document.title = baseText + " " + emojis[i % emojis.length];
+                 i++;
+            }, 800);
+        }
+</script>
 </body>
 
 </html>
-
 
