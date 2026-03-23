@@ -1,0 +1,21 @@
+{
+  "name": "Vibes App",
+  "short_name": "Vibes",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#a29bfe",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "Favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "Favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
